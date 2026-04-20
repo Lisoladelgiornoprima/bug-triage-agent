@@ -1,0 +1,23 @@
+# Core
+anthropic>=0.40.0
+pydantic>=2.10
+
+# GitHub integration
+PyGithub>=2.5.0
+gitpython>=3.1.43
+
+# CLI and display
+rich>=13.9
+click>=8.1
+
+# Utilities
+python-dotenv>=1.0
+tenacity>=9.0
+loguru>=0.7
+
+# Testing
+pytest>=8.3
+pytest-mock>=3.14
+
+# Code quality
+ruff>=0.8
