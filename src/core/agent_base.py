@@ -102,9 +102,24 @@ class BaseAgent(ABC):
             response = self.client.messages.create(
                 model=self.model,
                 max_tokens=4096,
-                system=self.system_prompt,
+                system=[
+                    {
+                        "type": "text",
+                        "text": self.system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
                 tools=self.tools if self.tools else None,
                 messages=messages,
+            )
+
+            # Log token usage and cache stats
+            usage = response.usage
+            cache_read = getattr(usage, "cache_read_input_tokens", 0)
+            cache_create = getattr(usage, "cache_creation_input_tokens", 0)
+            logger.debug(
+                f"[{self.name}] Tokens: input={usage.input_tokens}, output={usage.output_tokens}, "
+                f"cache_read={cache_read}, cache_create={cache_create}"
             )
 
             # If no tool use, agent is done

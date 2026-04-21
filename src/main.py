@@ -143,6 +143,12 @@ def triage(issue_url, repo):
     reproduction = state.get("bug_reproduction")
     if reproduction:
         display_dict_as_table(reproduction, "Phase 3: Bug Reproduction")
+        console.print()
+
+    # Phase 4: Fix Generation
+    fix_gen = state.get("fix_generation")
+    if fix_gen:
+        display_dict_as_table(fix_gen, "Phase 4: Fix Generation")
 
 
 if __name__ == "__main__":
