@@ -15,7 +15,7 @@ class IssueAnalyzer(BaseAgent):
     Output: Structured analysis including bug type, severity, stack traces, etc.
     """
 
-    def __init__(self, client, github_client: GitHubClient, model: str = "claude-sonnet-4-20250514"):
+    def __init__(self, client, github_client: GitHubClient, model: str = "claude-sonnet-4-6"):
         self.github_client = github_client
         super().__init__(name="IssueAnalyzer", client=client, model=model)
 

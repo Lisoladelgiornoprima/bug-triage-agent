@@ -42,7 +42,7 @@ def analyze(issue_url):
     Example:
         python -m src.main analyze https://github.com/psf/requests/issues/6234
     """
-    console.print(Panel.fit("🔍 Bug Triage Agent", style="bold blue"))
+    console.print(Panel.fit("Bug Triage Agent", style="bold blue"))
 
     # Validate API keys
     try:
@@ -65,13 +65,13 @@ def analyze(issue_url):
 
     # Display results
     if state.status.value == "failed":
-        console.print("[red]❌ Analysis failed[/red]")
+        console.print("[red]Analysis failed[/red]")
         for error in state.errors:
             console.print(f"  Phase: {error['phase']}")
             console.print(f"  Error: {error['error']}")
         sys.exit(1)
 
-    console.print("[green]✅ Analysis completed[/green]\n")
+    console.print("[green]Analysis completed[/green]\n")
 
     # Display issue analysis
     analysis = state.get("issue_analysis", {})

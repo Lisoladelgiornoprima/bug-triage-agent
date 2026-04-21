@@ -16,7 +16,7 @@ class BaseAgent(ABC):
     - Runs an agentic loop (Claude calls tools -> execute -> return -> continue)
     """
 
-    def __init__(self, name: str, client: Anthropic, model: str = "claude-sonnet-4-20250514"):
+    def __init__(self, name: str, client: Anthropic, model: str = "claude-sonnet-4-6"):
         self.name = name
         self.client = client
         self.model = model

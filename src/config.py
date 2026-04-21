@@ -19,7 +19,7 @@ class Config(BaseModel):
     github_token: str = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN", ""))
 
     # Model Configuration
-    default_model: str = Field(default="claude-sonnet-4-20250514")
+    default_model: str = Field(default="claude-sonnet-4-6")
 
     # Logging
     log_level: str = Field(default="INFO")
