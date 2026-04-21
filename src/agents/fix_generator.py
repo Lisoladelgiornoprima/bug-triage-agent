@@ -4,7 +4,7 @@ from typing import Any
 
 from loguru import logger
 
-from src.core.agent_base import BaseAgent
+from src.core.agent_base import BaseAgent, ProgressCallback
 from src.tools.code_analyzer import CodeAnalyzer
 from src.tools.file_system import FileSystemTools
 
@@ -19,11 +19,11 @@ class FixGenerator(BaseAgent):
     Output: Root cause analysis + code change diffs + test suggestions
     """
 
-    def __init__(self, client, repo_path: str, model: str = "claude-sonnet-4-6"):
+    def __init__(self, client, repo_path: str, model: str = "claude-sonnet-4-6", on_progress: ProgressCallback = None):
         self.repo_path = repo_path
         self.fs = FileSystemTools(repo_path)
         self.analyzer = CodeAnalyzer(repo_path)
-        super().__init__(name="FixGenerator", client=client, model=model)
+        super().__init__(name="FixGenerator", client=client, model=model, on_progress=on_progress)
 
     def _register_tools(self) -> list[dict[str, Any]]:
         return [

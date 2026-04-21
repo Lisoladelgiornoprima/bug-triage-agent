@@ -1,9 +1,13 @@
 """Base class for all agents with agentic loop implementation."""
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from typing import Any
 
 from anthropic import Anthropic
 from loguru import logger
+
+# Callback type: (agent_name, event_type, detail)
+ProgressCallback = Callable[[str, str, str], None] | None
 
 
 class BaseAgent(ABC):
@@ -16,10 +20,17 @@ class BaseAgent(ABC):
     - Runs an agentic loop (Claude calls tools -> execute -> return -> continue)
     """
 
-    def __init__(self, name: str, client: Anthropic, model: str = "claude-sonnet-4-6"):
+    def __init__(
+        self,
+        name: str,
+        client: Anthropic,
+        model: str = "claude-sonnet-4-6",
+        on_progress: ProgressCallback = None,
+    ):
         self.name = name
         self.client = client
         self.model = model
+        self.on_progress = on_progress
         self.tools = self._register_tools()
         self.system_prompt = self._build_system_prompt()
         logger.info(f"Initialized {self.name} agent with {len(self.tools)} tools")
@@ -87,6 +98,11 @@ class BaseAgent(ABC):
                     return {"raw_response": text}
         return {"raw_response": "No text content in response"}
 
+    def _notify(self, event: str, detail: str = "") -> None:
+        """Send progress notification if callback is set."""
+        if self.on_progress:
+            self.on_progress(self.name, event, detail)
+
     def process(self, context: dict[str, Any], max_iterations: int = 15) -> dict[str, Any]:
         """Run the agentic loop.
 
@@ -95,6 +111,7 @@ class BaseAgent(ABC):
         """
         messages = self._build_initial_messages(context)
         logger.info(f"[{self.name}] Starting agentic loop")
+        self._notify("start", "Starting analysis")
 
         for iteration in range(max_iterations):
             logger.debug(f"[{self.name}] Iteration {iteration + 1}/{max_iterations}")
@@ -125,6 +142,7 @@ class BaseAgent(ABC):
             # If no tool use, agent is done
             if response.stop_reason == "end_turn":
                 logger.info(f"[{self.name}] Completed in {iteration + 1} iterations")
+                self._notify("done", f"Completed in {iteration + 1} iterations")
                 return self._extract_result(response)
 
             # Process tool calls
@@ -132,6 +150,7 @@ class BaseAgent(ABC):
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"[{self.name}] Calling tool: {block.name}")
+                    self._notify("tool_call", block.name)
                     try:
                         result = self._handle_tool_call(block.name, block.input)
                     except Exception as e:

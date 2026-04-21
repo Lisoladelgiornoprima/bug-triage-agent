@@ -7,6 +7,7 @@ from src.agents.bug_reproducer import BugReproducer
 from src.agents.code_locator import CodeLocator
 from src.agents.fix_generator import FixGenerator
 from src.agents.issue_analyzer import IssueAnalyzer
+from src.core.agent_base import ProgressCallback
 from src.core.state import WorkflowState, WorkflowStatus
 from src.tools.github_client import GitHubClient
 
@@ -26,10 +27,12 @@ class Coordinator:
         anthropic_client: Anthropic,
         github_client: GitHubClient,
         repo_path: str | None = None,
+        on_progress: ProgressCallback = None,
     ):
         self.anthropic_client = anthropic_client
         self.github_client = github_client
         self.repo_path = repo_path
+        self.on_progress = on_progress
         self.state = WorkflowState()
 
     def run(self, issue_url: str) -> WorkflowState:
@@ -51,6 +54,7 @@ class Coordinator:
             analyzer = IssueAnalyzer(
                 client=self.anthropic_client,
                 github_client=self.github_client,
+                on_progress=self.on_progress,
             )
             result = analyzer.process({"issue_url": issue_url})
             self.state.update("issue_analysis", result)
@@ -74,6 +78,7 @@ class Coordinator:
             locator = CodeLocator(
                 client=self.anthropic_client,
                 repo_path=self.repo_path,
+                on_progress=self.on_progress,
             )
             result = locator.process({
                 "issue_data": self.state.get("issue_analysis"),
@@ -92,6 +97,7 @@ class Coordinator:
             reproducer = BugReproducer(
                 client=self.anthropic_client,
                 repo_path=self.repo_path,
+                on_progress=self.on_progress,
             )
             result = reproducer.process({
                 "issue_data": self.state.get("issue_analysis"),
@@ -110,6 +116,7 @@ class Coordinator:
             fix_gen = FixGenerator(
                 client=self.anthropic_client,
                 repo_path=self.repo_path,
+                on_progress=self.on_progress,
             )
             result = fix_gen.process({
                 "issue_data": self.state.get("issue_analysis"),

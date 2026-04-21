@@ -6,6 +6,7 @@ import click
 from anthropic import Anthropic
 from loguru import logger
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
 
@@ -96,24 +97,71 @@ def analyze(issue_url):
     display_dict_as_table(state.get("issue_analysis", {}), "Issue Analysis")
 
 
+PHASE_NAMES = {
+    "IssueAnalyzer": ("Phase 1", "Analyzing issue"),
+    "CodeLocator": ("Phase 2", "Locating code"),
+    "BugReproducer": ("Phase 3", "Reproducing bug"),
+    "FixGenerator": ("Phase 4", "Generating fix"),
+}
+
+
+def make_progress_table(events: list[tuple[str, str, str]]) -> Table:
+    """Build a live progress table from events."""
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column("Phase", style="bold cyan", width=10)
+    table.add_column("Status", width=60)
+
+    # Track latest state per agent
+    agent_state: dict[str, str] = {}
+    for agent_name, event, detail in events:
+        phase_label, _ = PHASE_NAMES.get(agent_name, ("?", "?"))
+        if event == "start":
+            agent_state[agent_name] = "[yellow]Running...[/yellow]"
+        elif event == "tool_call":
+            agent_state[agent_name] = f"[yellow]Calling tool: {detail}[/yellow]"
+        elif event == "done":
+            agent_state[agent_name] = f"[green]Done[/green] ({detail})"
+
+    for agent_name, (phase_label, desc) in PHASE_NAMES.items():
+        status = agent_state.get(agent_name, "[dim]Pending[/dim]")
+        table.add_row(phase_label, f"{desc} - {status}")
+
+    return table
+
+
 @cli.command()
 @click.argument("issue_url")
 @click.option("--repo", required=True, help="Path to local repository clone")
-def triage(issue_url, repo):
-    """Full bug triage: analyze issue + locate code + reproduce bug.
+@click.option("--output", "-o", type=click.Path(), help="Export results to JSON or Markdown file")
+def triage(issue_url, repo, output):
+    """Full bug triage: analyze issue + locate code + reproduce bug + suggest fix.
 
     Example:
         python -m src.main triage https://github.com/psf/requests/issues/6655 --repo ./requests
+        python -m src.main triage URL --repo ./repo -o report.json
+        python -m src.main triage URL --repo ./repo -o report.md
     """
     console.print(Panel.fit("Bug Triage Agent - Full Triage", style="bold blue"))
     anthropic_client, github_client = init_clients()
 
-    coordinator = Coordinator(anthropic_client, github_client, repo_path=repo)
+    # Progress tracking
+    events: list[tuple[str, str, str]] = []
+    live = Live(make_progress_table(events), console=console, refresh_per_second=4)
 
-    console.print("[bold]Starting full triage pipeline...[/bold]\n")
-    state = coordinator.run(issue_url)
+    def on_progress(agent_name: str, event: str, detail: str):
+        events.append((agent_name, event, detail))
+        live.update(make_progress_table(events))
 
-    # Display errors (non-fatal ones)
+    coordinator = Coordinator(
+        anthropic_client, github_client, repo_path=repo, on_progress=on_progress
+    )
+
+    console.print()
+    with live:
+        state = coordinator.run(issue_url)
+    console.print()
+
+    # Display errors
     if state.errors:
         console.print("[yellow]Warnings:[/yellow]")
         for error in state.errors:
@@ -126,28 +174,74 @@ def triage(issue_url, repo):
 
     console.print("[green]Triage completed[/green]\n")
 
-    # Phase 1: Issue Analysis
-    analysis = state.get("issue_analysis")
-    if analysis:
-        display_dict_as_table(analysis, "Phase 1: Issue Analysis")
-        console.print()
+    # Display results
+    for key, title in [
+        ("issue_analysis", "Phase 1: Issue Analysis"),
+        ("code_location", "Phase 2: Code Location"),
+        ("bug_reproduction", "Phase 3: Bug Reproduction"),
+        ("fix_generation", "Phase 4: Fix Generation"),
+    ]:
+        data = state.get(key)
+        if data:
+            display_dict_as_table(data, title)
+            console.print()
 
-    # Phase 2: Code Location
-    code_loc = state.get("code_location")
-    if code_loc:
-        display_dict_as_table(code_loc, "Phase 2: Code Location")
-        console.print()
+    # Export results
+    if output:
+        export_results(state, output)
 
-    # Phase 3: Bug Reproduction
-    reproduction = state.get("bug_reproduction")
-    if reproduction:
-        display_dict_as_table(reproduction, "Phase 3: Bug Reproduction")
-        console.print()
 
-    # Phase 4: Fix Generation
-    fix_gen = state.get("fix_generation")
-    if fix_gen:
-        display_dict_as_table(fix_gen, "Phase 4: Fix Generation")
+def export_results(state, output_path: str) -> None:
+    """Export triage results to JSON or Markdown."""
+    results = {
+        "issue_analysis": state.get("issue_analysis"),
+        "code_location": state.get("code_location"),
+        "bug_reproduction": state.get("bug_reproduction"),
+        "fix_generation": state.get("fix_generation"),
+        "errors": state.errors,
+    }
+
+    if output_path.endswith(".md"):
+        _export_markdown(results, output_path)
+    else:
+        _export_json(results, output_path)
+
+    console.print(f"[green]Results exported to {output_path}[/green]")
+
+
+def _export_json(results: dict, path: str) -> None:
+    """Export as JSON."""
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, default=str, ensure_ascii=False)
+
+
+def _export_markdown(results: dict, path: str) -> None:
+    """Export as Markdown report."""
+    lines = ["# Bug Triage Report\n"]
+
+    section_titles = {
+        "issue_analysis": "Issue Analysis",
+        "code_location": "Code Location",
+        "bug_reproduction": "Bug Reproduction",
+        "fix_generation": "Fix Generation",
+    }
+
+    for key, title in section_titles.items():
+        data = results.get(key)
+        if not data:
+            continue
+        lines.append(f"\n## {title}\n")
+        if "raw_response" in data:
+            lines.append(data["raw_response"])
+        else:
+            for field, value in data.items():
+                if isinstance(value, (list, dict)):
+                    lines.append(f"**{field}**:\n```json\n{json.dumps(value, indent=2, default=str)}\n```\n")
+                else:
+                    lines.append(f"**{field}**: {value}\n")
+
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
 
 
 if __name__ == "__main__":

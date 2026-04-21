@@ -4,7 +4,7 @@ from typing import Any
 
 from loguru import logger
 
-from src.core.agent_base import BaseAgent
+from src.core.agent_base import BaseAgent, ProgressCallback
 from src.tools.github_client import GitHubClient
 
 
@@ -15,9 +15,9 @@ class IssueAnalyzer(BaseAgent):
     Output: Structured analysis including bug type, severity, stack traces, etc.
     """
 
-    def __init__(self, client, github_client: GitHubClient, model: str = "claude-sonnet-4-6"):
+    def __init__(self, client, github_client: GitHubClient, model: str = "claude-sonnet-4-6", on_progress: ProgressCallback = None):
         self.github_client = github_client
-        super().__init__(name="IssueAnalyzer", client=client, model=model)
+        super().__init__(name="IssueAnalyzer", client=client, model=model, on_progress=on_progress)
 
     def _register_tools(self) -> list[dict[str, Any]]:
         return [
