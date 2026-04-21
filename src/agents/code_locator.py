@@ -1,6 +1,6 @@
 """Code Locator Agent - locates bug-related code files in a repository."""
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from loguru import logger
 
@@ -27,7 +27,7 @@ class CodeLocator(BaseAgent):
         self.analyzer = CodeAnalyzer(repo_path)
         super().__init__(name="CodeLocator", client=client, model=model)
 
-    def _register_tools(self) -> List[Dict[str, Any]]:
+    def _register_tools(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "search_files",
@@ -132,7 +132,7 @@ Output your findings as JSON:
 
 Order files by confidence (highest first). Include 3-7 most relevant files."""
 
-    def _build_initial_messages(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _build_initial_messages(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         """Present the issue analysis to the code locator."""
         issue_data = context.get("issue_data", {})
         issue_summary = json.dumps(issue_data, indent=2, default=str)
@@ -143,7 +143,7 @@ Order files by confidence (highest first). Include 3-7 most relevant files."""
             }
         ]
 
-    def _handle_tool_call(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+    def _handle_tool_call(self, tool_name: str, tool_input: dict[str, Any]) -> str:
         """Execute file system and code analysis tool calls."""
         try:
             if tool_name == "search_files":

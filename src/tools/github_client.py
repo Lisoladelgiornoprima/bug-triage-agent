@@ -1,6 +1,6 @@
 """GitHub API client for fetching issues and repository data."""
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from github import Github, GithubException
 from loguru import logger
@@ -28,7 +28,7 @@ class GitHubClient:
             raise ValueError(f"Invalid GitHub issue URL: {url}")
         return match.group(1), int(match.group(2))
 
-    def get_issue(self, url: str) -> Dict[str, Any]:
+    def get_issue(self, url: str) -> dict[str, Any]:
         """Fetch issue details from a GitHub URL."""
         repo_name, issue_number = self.parse_issue_url(url)
         logger.info(f"Fetching issue #{issue_number} from {repo_name}")
@@ -52,7 +52,7 @@ class GitHubClient:
             "comments_count": issue.comments,
         }
 
-    def get_issue_comments(self, url: str) -> List[Dict[str, Any]]:
+    def get_issue_comments(self, url: str) -> list[dict[str, Any]]:
         """Fetch all comments for an issue."""
         repo_name, issue_number = self.parse_issue_url(url)
         logger.info(f"Fetching comments for issue #{issue_number}")
@@ -74,8 +74,8 @@ class GitHubClient:
         ]
 
     def search_similar_issues(
-        self, repo_name: str, keywords: List[str], limit: int = 5
-    ) -> List[Dict[str, Any]]:
+        self, repo_name: str, keywords: list[str], limit: int = 5
+    ) -> list[dict[str, Any]]:
         """Search for similar issues in a repository."""
         query = f"repo:{repo_name} is:issue {' '.join(keywords)}"
         logger.info(f"Searching issues with query: {query}")

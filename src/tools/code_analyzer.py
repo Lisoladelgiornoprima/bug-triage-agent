@@ -1,8 +1,7 @@
 """Code analysis tools using Python AST for structure extraction."""
 import ast
-import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -17,7 +16,7 @@ class CodeAnalyzer:
     def __init__(self, repo_path: str):
         self.repo_path = Path(repo_path).resolve()
 
-    def _parse_file(self, file_path: str) -> Optional[ast.Module]:
+    def _parse_file(self, file_path: str) -> ast.Module | None:
         """Parse a Python file into an AST."""
         full_path = self.repo_path / file_path
         if not full_path.exists() or not full_path.suffix == ".py":
@@ -29,7 +28,7 @@ class CodeAnalyzer:
             logger.warning(f"Syntax error in {file_path}: {e}")
             return None
 
-    def get_file_structure(self, file_path: str) -> Optional[Dict[str, Any]]:
+    def get_file_structure(self, file_path: str) -> dict[str, Any] | None:
         """Extract the structure of a Python file.
 
         Returns:
@@ -90,7 +89,7 @@ class CodeAnalyzer:
 
         return structure
 
-    def find_symbol(self, symbol_name: str, file_pattern: str = "*.py") -> List[Dict[str, Any]]:
+    def find_symbol(self, symbol_name: str, file_pattern: str = "*.py") -> list[dict[str, Any]]:
         """Find where a symbol (function/class) is defined across the repo.
 
         Args:

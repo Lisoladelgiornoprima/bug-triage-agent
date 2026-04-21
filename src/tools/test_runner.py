@@ -1,8 +1,6 @@
 """Test runner tool for executing code in a sandboxed subprocess."""
 import subprocess
-import tempfile
 from pathlib import Path
-from typing import Dict, Optional
 
 from loguru import logger
 
@@ -10,13 +8,13 @@ from loguru import logger
 class TestRunner:
     """Executes test code in a subprocess with timeout and resource limits."""
 
-    def __init__(self, repo_path: str, python_path: Optional[str] = None):
+    def __init__(self, repo_path: str, python_path: str | None = None):
         self.repo_path = Path(repo_path).resolve()
         self.python_path = python_path or "python"
 
     def run_test_code(
         self, code: str, timeout: int = 30, filename: str = "test_reproduce.py"
-    ) -> Dict[str, any]:
+    ) -> dict[str, any]:
         """Write test code to a temp file and execute it.
 
         Args:
@@ -72,7 +70,7 @@ class TestRunner:
             if test_file.exists():
                 test_file.unlink()
 
-    def run_pytest(self, test_path: str = "", timeout: int = 60) -> Dict[str, any]:
+    def run_pytest(self, test_path: str = "", timeout: int = 60) -> dict[str, any]:
         """Run pytest on the repository or a specific test file.
 
         Args:

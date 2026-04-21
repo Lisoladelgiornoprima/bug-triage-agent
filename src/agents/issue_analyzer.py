@@ -1,6 +1,6 @@
 """Issue Analyzer Agent - analyzes GitHub issues to extract structured bug info."""
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from loguru import logger
 
@@ -19,7 +19,7 @@ class IssueAnalyzer(BaseAgent):
         self.github_client = github_client
         super().__init__(name="IssueAnalyzer", client=client, model=model)
 
-    def _register_tools(self) -> List[Dict[str, Any]]:
+    def _register_tools(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "get_issue",
@@ -84,7 +84,7 @@ Output your analysis as JSON in this format:
 
 Be thorough but concise. If information is missing, use null or empty lists."""
 
-    def _build_initial_messages(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _build_initial_messages(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         """Build initial message with the issue URL."""
         issue_url = context.get("issue_url", "")
         return [
@@ -94,7 +94,7 @@ Be thorough but concise. If information is missing, use null or empty lists."""
             }
         ]
 
-    def _handle_tool_call(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+    def _handle_tool_call(self, tool_name: str, tool_input: dict[str, Any]) -> str:
         """Execute GitHub API calls."""
         try:
             if tool_name == "get_issue":

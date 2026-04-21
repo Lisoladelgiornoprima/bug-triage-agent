@@ -3,7 +3,7 @@ import json
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class WorkflowStatus(Enum):
@@ -25,8 +25,8 @@ class WorkflowState:
 
     status: WorkflowStatus = WorkflowStatus.PENDING
     current_phase: str = ""
-    data: Dict[str, Any] = field(default_factory=dict)
-    errors: List[Dict[str, str]] = field(default_factory=list)
+    data: dict[str, Any] = field(default_factory=dict)
+    errors: list[dict[str, str]] = field(default_factory=list)
 
     def update(self, key: str, value: Any) -> None:
         """Update workflow data."""

@@ -1,6 +1,6 @@
 """Base class for all agents with agentic loop implementation."""
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 from anthropic import Anthropic
 from loguru import logger
@@ -25,7 +25,7 @@ class BaseAgent(ABC):
         logger.info(f"Initialized {self.name} agent with {len(self.tools)} tools")
 
     @abstractmethod
-    def _register_tools(self) -> List[Dict[str, Any]]:
+    def _register_tools(self) -> list[dict[str, Any]]:
         """Register tools this agent can use (Claude tool use schema).
 
         Returns:
@@ -39,7 +39,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def _handle_tool_call(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+    def _handle_tool_call(self, tool_name: str, tool_input: dict[str, Any]) -> str:
         """Execute a tool call and return the result.
 
         Args:
@@ -51,7 +51,7 @@ class BaseAgent(ABC):
         """
         pass
 
-    def _build_initial_messages(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _build_initial_messages(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         """Build the initial message list from context.
 
         Subclasses can override to customize how context is presented.
@@ -64,7 +64,7 @@ class BaseAgent(ABC):
             }
         ]
 
-    def _extract_result(self, response) -> Dict[str, Any]:
+    def _extract_result(self, response) -> dict[str, Any]:
         """Extract the final result from Claude's response.
 
         Looks for text content in the response and attempts to parse
@@ -87,7 +87,7 @@ class BaseAgent(ABC):
                     return {"raw_response": text}
         return {"raw_response": "No text content in response"}
 
-    def process(self, context: Dict[str, Any], max_iterations: int = 15) -> Dict[str, Any]:
+    def process(self, context: dict[str, Any], max_iterations: int = 15) -> dict[str, Any]:
         """Run the agentic loop.
 
         The loop continues until Claude stops calling tools (end_turn)

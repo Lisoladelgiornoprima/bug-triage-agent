@@ -1,11 +1,9 @@
 """Configuration management for Bug Triage Agent."""
 import os
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
-
 
 # Load environment variables
 load_dotenv()

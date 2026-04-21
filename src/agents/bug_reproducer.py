@@ -1,6 +1,6 @@
 """Bug Reproducer Agent - generates and runs test code to reproduce bugs."""
 import json
-from typing import Any, Dict, List
+from typing import Any
 
 from loguru import logger
 
@@ -25,7 +25,7 @@ class BugReproducer(BaseAgent):
         self.runner = TestRunner(repo_path)
         super().__init__(name="BugReproducer", client=client, model=model)
 
-    def _register_tools(self) -> List[Dict[str, Any]]:
+    def _register_tools(self) -> list[dict[str, Any]]:
         return [
             {
                 "name": "read_file",
@@ -99,7 +99,7 @@ Output your findings as JSON:
 
 If you cannot reproduce the bug, explain why and still provide your best attempt."""
 
-    def _build_initial_messages(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _build_initial_messages(self, context: dict[str, Any]) -> list[dict[str, Any]]:
         """Present the issue analysis and code locations."""
         issue_data = context.get("issue_data", {})
         code_locations = context.get("code_locations", {})
@@ -115,7 +115,7 @@ If you cannot reproduce the bug, explain why and still provide your best attempt
             }
         ]
 
-    def _handle_tool_call(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+    def _handle_tool_call(self, tool_name: str, tool_input: dict[str, Any]) -> str:
         """Execute test runner and file system tool calls."""
         try:
             if tool_name == "read_file":

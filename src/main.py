@@ -13,7 +13,6 @@ from src.config import config
 from src.core.coordinator import Coordinator
 from src.tools.github_client import GitHubClient
 
-
 console = Console()
 
 

@@ -3,7 +3,6 @@ import fnmatch
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from loguru import logger
 
@@ -28,7 +27,7 @@ class FileSystemTools:
         """Check if a directory should be skipped."""
         return dir_name in self.SKIP_DIRS or dir_name.startswith(".")
 
-    def search_files(self, pattern: str, max_results: int = 50) -> List[str]:
+    def search_files(self, pattern: str, max_results: int = 50) -> list[str]:
         """Search for files matching a glob pattern.
 
         Args:
@@ -50,7 +49,7 @@ class FileSystemTools:
                         return results
         return results
 
-    def read_file(self, file_path: str, max_lines: int = 500) -> Optional[str]:
+    def read_file(self, file_path: str, max_lines: int = 500) -> str | None:
         """Read file contents.
 
         Args:
@@ -66,7 +65,7 @@ class FileSystemTools:
             return None
 
         try:
-            with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+            with open(full_path, encoding="utf-8", errors="ignore") as f:
                 lines = []
                 for i, line in enumerate(f):
                     if i >= max_lines:
@@ -80,7 +79,7 @@ class FileSystemTools:
 
     def grep_content(
         self, pattern: str, file_pattern: str = "*.py", max_results: int = 20
-    ) -> List[Dict[str, any]]:
+    ) -> list[dict[str, any]]:
         """Search for regex pattern in file contents.
 
         Args:

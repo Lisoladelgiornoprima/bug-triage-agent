@@ -1,5 +1,4 @@
 """Coordinator for orchestrating multiple agents."""
-from typing import Any, Dict, Optional
 
 from anthropic import Anthropic
 from loguru import logger
@@ -26,7 +25,7 @@ class Coordinator:
         self,
         anthropic_client: Anthropic,
         github_client: GitHubClient,
-        repo_path: Optional[str] = None,
+        repo_path: str | None = None,
     ):
         self.anthropic_client = anthropic_client
         self.github_client = github_client
