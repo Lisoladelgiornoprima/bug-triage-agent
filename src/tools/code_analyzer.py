@@ -1,0 +1,141 @@
+"""Code analysis tools using Python AST for structure extraction."""
+import ast
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from loguru import logger
+
+
+class CodeAnalyzer:
+    """Analyzes Python source code using the ast module.
+
+    Provides function/class discovery, import analysis, and
+    call graph extraction without external dependencies.
+    """
+
+    def __init__(self, repo_path: str):
+        self.repo_path = Path(repo_path).resolve()
+
+    def _parse_file(self, file_path: str) -> Optional[ast.Module]:
+        """Parse a Python file into an AST."""
+        full_path = self.repo_path / file_path
+        if not full_path.exists() or not full_path.suffix == ".py":
+            return None
+        try:
+            source = full_path.read_text(encoding="utf-8", errors="ignore")
+            return ast.parse(source, filename=file_path)
+        except SyntaxError as e:
+            logger.warning(f"Syntax error in {file_path}: {e}")
+            return None
+
+    def get_file_structure(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Extract the structure of a Python file.
+
+        Returns:
+            Dict with classes, functions, imports, and their line numbers
+        """
+        tree = self._parse_file(file_path)
+        if tree is None:
+            return None
+
+        structure = {
+            "file": file_path,
+            "classes": [],
+            "functions": [],
+            "imports": [],
+        }
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                methods = [
+                    {"name": n.name, "line": n.lineno}
+                    for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                ]
+                structure["classes"].append({
+                    "name": node.name,
+                    "line": node.lineno,
+                    "methods": methods,
+                })
+
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Only top-level functions (not methods inside classes)
+                if not any(
+                    isinstance(parent, ast.ClassDef)
+                    for parent in ast.walk(tree)
+                    if hasattr(parent, 'body') and node in getattr(parent, 'body', [])
+                ):
+                    structure["functions"].append({
+                        "name": node.name,
+                        "line": node.lineno,
+                        "args": [arg.arg for arg in node.args.args],
+                    })
+
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    structure["imports"].append({
+                        "module": alias.name,
+                        "alias": alias.asname,
+                        "line": node.lineno,
+                    })
+
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                for alias in node.names:
+                    structure["imports"].append({
+                        "module": f"{module}.{alias.name}",
+                        "alias": alias.asname,
+                        "line": node.lineno,
+                    })
+
+        return structure
+
+    def find_symbol(self, symbol_name: str, file_pattern: str = "*.py") -> List[Dict[str, Any]]:
+        """Find where a symbol (function/class) is defined across the repo.
+
+        Args:
+            symbol_name: Name of the function or class to find
+            file_pattern: Glob pattern for files to search
+
+        Returns:
+            List of {file, name, type, line}
+        """
+        from src.tools.file_system import FileSystemTools
+
+        fs = FileSystemTools(str(self.repo_path))
+        files = fs.search_files(file_pattern, max_results=200)
+        results = []
+
+        for file_path in files:
+            structure = self.get_file_structure(file_path)
+            if not structure:
+                continue
+
+            for cls in structure["classes"]:
+                if symbol_name.lower() in cls["name"].lower():
+                    results.append({
+                        "file": file_path,
+                        "name": cls["name"],
+                        "type": "class",
+                        "line": cls["line"],
+                    })
+                for method in cls["methods"]:
+                    if symbol_name.lower() in method["name"].lower():
+                        results.append({
+                            "file": file_path,
+                            "name": f"{cls['name']}.{method['name']}",
+                            "type": "method",
+                            "line": method["line"],
+                        })
+
+            for func in structure["functions"]:
+                if symbol_name.lower() in func["name"].lower():
+                    results.append({
+                        "file": file_path,
+                        "name": func["name"],
+                        "type": "function",
+                        "line": func["line"],
+                    })
+
+        logger.debug(f"Found {len(results)} definitions for '{symbol_name}'")
+        return results

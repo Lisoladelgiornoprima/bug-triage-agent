@@ -36,3 +36,4 @@ htmlcov/
 
 # Type checking
 .mypy_cache/
+test_repos/
