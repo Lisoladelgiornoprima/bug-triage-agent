@@ -63,6 +63,24 @@ def test_add():
 '''
     )
 
+    # A JavaScript file for multi-language testing
+    (src_dir / "helpers.js").write_text(
+        '''import { format } from 'date-fns';
+
+class Formatter {
+    formatDate(date) {
+        return format(date, 'yyyy-MM-dd');
+    }
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+module.exports = { Formatter, capitalize };
+'''
+    )
+
     return tmp_path
 
 

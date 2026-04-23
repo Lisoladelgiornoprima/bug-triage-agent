@@ -5,18 +5,22 @@ from typing import Any
 
 from loguru import logger
 
+from src.tools.code_analyzer_js import JSCodeAnalyzer
+
 
 class CodeAnalyzer:
-    """Analyzes Python source code using the ast module.
+    """Analyzes source code using language-specific parsers.
 
-    Provides function/class discovery, import analysis, and
-    call graph extraction without external dependencies.
+    Supports:
+    - Python: AST-based analysis
+    - JavaScript/TypeScript: Regex-based analysis
     """
 
     def __init__(self, repo_path: str):
         self.repo_path = Path(repo_path).resolve()
+        self.js_analyzer = JSCodeAnalyzer(repo_path)
 
-    def _parse_file(self, file_path: str) -> ast.Module | None:
+    def _parse_python_file(self, file_path: str) -> ast.Module | None:
         """Parse a Python file into an AST."""
         full_path = self.repo_path / file_path
         if not full_path.exists() or not full_path.suffix == ".py":
@@ -29,12 +33,30 @@ class CodeAnalyzer:
             return None
 
     def get_file_structure(self, file_path: str) -> dict[str, Any] | None:
-        """Extract the structure of a Python file.
+        """Extract the structure of a source file.
+
+        Automatically detects language and uses appropriate parser.
 
         Returns:
             Dict with classes, functions, imports, and their line numbers
         """
-        tree = self._parse_file(file_path)
+        full_path = self.repo_path / file_path
+        if not full_path.exists():
+            return None
+
+        # Route to appropriate analyzer
+        suffix = full_path.suffix
+        if suffix == ".py":
+            return self._get_python_structure(file_path)
+        elif suffix in {".js", ".ts", ".jsx", ".tsx"}:
+            return self.js_analyzer.get_file_structure(file_path)
+        else:
+            logger.warning(f"Unsupported file type: {suffix}")
+            return None
+
+    def _get_python_structure(self, file_path: str) -> dict[str, Any] | None:
+        """Extract structure from a Python file using AST."""
+        tree = self._parse_python_file(file_path)
         if tree is None:
             return None
 
@@ -92,6 +114,8 @@ class CodeAnalyzer:
     def find_symbol(self, symbol_name: str, file_pattern: str = "*.py") -> list[dict[str, Any]]:
         """Find where a symbol (function/class) is defined across the repo.
 
+        Searches Python, JavaScript, and TypeScript files.
+
         Args:
             symbol_name: Name of the function or class to find
             file_pattern: Glob pattern for files to search
@@ -102,39 +126,55 @@ class CodeAnalyzer:
         from src.tools.file_system import FileSystemTools
 
         fs = FileSystemTools(str(self.repo_path))
-        files = fs.search_files(file_pattern, max_results=200)
+
+        # Search Python files
+        py_files = fs.search_files(file_pattern, max_results=200)
         results = []
 
-        for file_path in files:
-            structure = self.get_file_structure(file_path)
+        for fp in py_files:
+            structure = self.get_file_structure(fp)
             if not structure:
                 continue
+            results.extend(self._match_symbol(structure, symbol_name, fp))
 
-            for cls in structure["classes"]:
-                if symbol_name.lower() in cls["name"].lower():
-                    results.append({
-                        "file": file_path,
-                        "name": cls["name"],
-                        "type": "class",
-                        "line": cls["line"],
-                    })
-                for method in cls["methods"]:
-                    if symbol_name.lower() in method["name"].lower():
-                        results.append({
-                            "file": file_path,
-                            "name": f"{cls['name']}.{method['name']}",
-                            "type": "method",
-                            "line": method["line"],
-                        })
-
-            for func in structure["functions"]:
-                if symbol_name.lower() in func["name"].lower():
-                    results.append({
-                        "file": file_path,
-                        "name": func["name"],
-                        "type": "function",
-                        "line": func["line"],
-                    })
+        # Also search JS/TS files
+        for ext in ["*.js", "*.ts", "*.jsx", "*.tsx"]:
+            for fp in fs.search_files(ext, max_results=100):
+                structure = self.js_analyzer.get_file_structure(fp)
+                if not structure:
+                    continue
+                results.extend(self._match_symbol(structure, symbol_name, fp))
 
         logger.debug(f"Found {len(results)} definitions for '{symbol_name}'")
+        return results
+
+    @staticmethod
+    def _match_symbol(structure: dict, symbol_name: str, file_path: str) -> list[dict[str, Any]]:
+        """Match a symbol name against a file structure."""
+        results = []
+        for cls in structure.get("classes", []):
+            if symbol_name.lower() in cls["name"].lower():
+                results.append({
+                    "file": file_path,
+                    "name": cls["name"],
+                    "type": "class",
+                    "line": cls["line"],
+                })
+            for method in cls.get("methods", []):
+                if symbol_name.lower() in method["name"].lower():
+                    results.append({
+                        "file": file_path,
+                        "name": f"{cls['name']}.{method['name']}",
+                        "type": "method",
+                        "line": method["line"],
+                    })
+
+        for func in structure.get("functions", []):
+            if symbol_name.lower() in func["name"].lower():
+                results.append({
+                    "file": file_path,
+                    "name": func["name"],
+                    "type": "function",
+                    "line": func["line"],
+                })
         return results

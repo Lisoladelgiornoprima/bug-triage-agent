@@ -35,8 +35,9 @@ Bug Triage Agent 是一个基于 Claude AI 的自动化工具，能够：
 **技术栈**：
 - **LLM**: Anthropic Claude Sonnet 4.6（支持 tool use + prompt caching）
 - **GitHub API**: PyGithub
-- **代码分析**: Python AST（无需 tree-sitter）
-- **CLI**: Click + Rich
+- **代码分析**: Python AST + JavaScript/TypeScript 正则解析
+- **支持语言**: Python, JavaScript, TypeScript, JSX, TSX
+- **CLI**: Click + Rich（实时进度展示）
 - **架构**: 自实现 Multi-Agent 编排（不依赖 LangChain）
 
 ## 快速开始
@@ -100,9 +101,10 @@ D:\agentproject\
 │   └── tools/
 │       ├── github_client.py       # GitHub API 封装
 │       ├── file_system.py         # 文件搜索/读取/grep
-│       ├── code_analyzer.py       # AST 分析
+│       ├── code_analyzer.py       # 多语言代码分析（Python AST）
+│       ├── code_analyzer_js.py    # JavaScript/TypeScript 分析
 │       └── test_runner.py         # 测试执行
-├── tests/                         # 测试（待完善）
+├── tests/                         # 37 个单元测试
 ├── requirements.txt
 └── README.md
 ```
