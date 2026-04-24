@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Triage Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 2px solid #16213e;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #4285f4;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        .section {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .section-title {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: #4285f4;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: #0f1419;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #eee;
+            font-size: 1em;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+
+        button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #357ae8;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .phase-card {
+            background: #0f1419;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #333;
+        }
+
+        .phase-card.pending {
+            border-left-color: #666;
+        }
+
+        .phase-card.running {
+            border-left-color: #4285f4;
+            animation: pulse 2s infinite;
+        }
+
+        .phase-card.done {
+            border-left-color: #0f9b58;
+        }
+
+        .phase-card.error {
+            border-left-color: #ea4335;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .phase-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .phase-status {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .log-box {
+            background: #0f1419;
+            border: 1px solid #333;
+            border-radius: 4px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .log-time {
+            color: #666;
+        }
+
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        details {
+            background: #0f1419;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #4285f4;
+        }
+
+        .result-content {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+
+        .download-buttons {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .download-buttons button {
+            margin: 0 10px;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐛 Bug Triage Agent</h1>
+            <p class="subtitle">Automated GitHub Issue Analysis & Bug Triage</p>
+        </header>
+
+        <div class="section">
+            <div class="section-title">Start Triage</div>
+            <div class="input-group">
+                <label for="issueUrl">GitHub Issue URL</label>
+                <input type="text" id="issueUrl" placeholder="https://github.com/owner/repo/issues/123">
+            </div>
+            <div class="input-group">
+                <label for="repoPath">Local Repository Path (optional)</label>
+                <input type="text" id="repoPath" placeholder="D:\repos\project">
+            </div>
+            <button id="startBtn" onclick="startTriage()">Start Triage</button>
+        </div>
+
+        <div class="section" id="progressSection" style="display:none;">
+            <div class="section-title">Pipeline Progress</div>
+            <div class="progress-grid">
+                <div class="phase-card pending" id="phase1">
+                    <div class="phase-title">Phase 1: Issue Analysis</div>
+                    <div class="phase-status">Pending...</div>
+                </div>
+                <div class="phase-card pending" id="phase2">
+                    <div class="phase-title">Phase 2: Code Location</div>
+                    <div class="phase-status">Pending...</div>
+                </div>
+                <div class="phase-card pending" id="phase3">
+                    <div class="phase-title">Phase 3: Bug Reproduction</div>
+                    <div class="phase-status">Pending...</div>
+                </div>
+                <div class="phase-card pending" id="phase4">
+                    <div class="phase-title">Phase 4: Fix Generation</div>
+                    <div class="phase-status">Pending...</div>
+                </div>
+            </div>
+            <div class="section-title" style="margin-top:20px;">Live Log</div>
+            <div class="log-box" id="logBox"></div>
+        </div>
+
+        <div class="section results" id="resultsSection">
+            <div class="section-title">Results</div>
+            <div id="resultsContent"></div>
+            <div class="download-buttons">
+                <button onclick="downloadReport('json')">Download JSON</button>
+                <button onclick="downloadReport('md')">Download Markdown</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let currentTaskId = null;
+
+        const phaseMap = {
+            'IssueAnalyzer': 'phase1',
+            'CodeLocator': 'phase2',
+            'BugReproducer': 'phase3',
+            'FixGenerator': 'phase4'
+        };
+
+        async function startTriage() {
+            const issueUrl = document.getElementById('issueUrl').value.trim();
+            const repoPath = document.getElementById('repoPath').value.trim();
+
+            if (!issueUrl) {
+                alert('Please enter a GitHub issue URL');
+                return;
+            }
+
+            // Reset UI
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').classList.remove('show');
+            document.getElementById('logBox').innerHTML = '';
+            resetPhases();
+
+            try {
+                // Create task
+                const response = await fetch('/api/triage', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({issue_url: issueUrl, repo_path: repoPath})
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to create task');
+                }
+
+                const data = await response.json();
+                currentTaskId = data.task_id;
+
+                // Connect WebSocket
+                connectWebSocket(data.task_id);
+            } catch (error) {
+                alert('Error: ' + error.message);
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        function connectWebSocket(taskId) {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/${taskId}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+
+            ws.onerror = (error) => {
+                addLog('WebSocket error', 'error');
+            };
+
+            ws.onclose = () => {
+                addLog('Connection closed', 'info');
+            };
+        }
+
+        function handleMessage(msg) {
+            if (msg.type === 'progress') {
+                updatePhase(msg.agent, msg.event, msg.detail);
+                addLog(`[${msg.agent}] ${msg.event}: ${msg.detail}`);
+            } else if (msg.type === 'done') {
+                addLog('Triage completed!', 'success');
+                showResults(msg.result);
+                document.getElementById('startBtn').disabled = false;
+                if (ws) ws.close();
+            } else if (msg.type === 'error') {
+                addLog('Error: ' + msg.message, 'error');
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        function updatePhase(agent, event, detail) {
+            const phaseId = phaseMap[agent];
+            if (!phaseId) return;
+
+            const card = document.getElementById(phaseId);
+            const statusEl = card.querySelector('.phase-status');
+
+            card.className = 'phase-card';
+            if (event === 'start') {
+                card.classList.add('running');
+                statusEl.textContent = 'Running...';
+            } else if (event === 'tool_call') {
+                card.classList.add('running');
+                statusEl.textContent = `Calling: ${detail}`;
+            } else if (event === 'done') {
+                card.classList.add('done');
+                statusEl.textContent = '✓ Completed';
+            }
+        }
+
+        function resetPhases() {
+            ['phase1', 'phase2', 'phase3', 'phase4'].forEach(id => {
+                const card = document.getElementById(id);
+                card.className = 'phase-card pending';
+                card.querySelector('.phase-status').textContent = 'Pending...';
+            });
+        }
+
+        function addLog(message, type = 'info') {
+            const logBox = document.getElementById('logBox');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function showResults(result) {
+            const section = document.getElementById('resultsSection');
+            const content = document.getElementById('resultsContent');
+            content.innerHTML = '';
+
+            const phases = [
+                {key: 'issue_analysis', title: 'Issue Analysis'},
+                {key: 'code_location', title: 'Code Location'},
+                {key: 'bug_reproduction', title: 'Bug Reproduction'},
+                {key: 'fix_generation', title: 'Fix Generation'}
+            ];
+
+            phases.forEach(phase => {
+                const data = result[phase.key];
+                if (!data) return;
+
+                const details = document.createElement('details');
+                details.innerHTML = `
+                    <summary>${phase.title}</summary>
+                    <div class="result-content">
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                content.appendChild(details);
+            });
+
+            section.classList.add('show');
+        }
+
+        function downloadReport(format) {
+            if (!currentTaskId) return;
+            window.open(`/api/triage/${currentTaskId}/report?format=${format}`, '_blank');
+        }
+    </script>
+</body>
+</html>

@@ -244,5 +244,29 @@ def _export_markdown(results: dict, path: str) -> None:
         f.write("\n".join(lines))
 
 
+@cli.command()
+@click.option("--host", default="0.0.0.0", help="Host to bind to")
+@click.option("--port", default=8000, help="Port to bind to")
+def web(host, port):
+    """Start the Web UI server.
+
+    Example:
+        python -m src.main web --port 8000
+    """
+    try:
+        import uvicorn
+        from src.web.app import app
+
+        console.print(Panel.fit("Bug Triage Agent - Web UI", style="bold blue"))
+        console.print(f"[green]Starting server at http://{host}:{port}[/green]")
+        console.print("[yellow]Press Ctrl+C to stop[/yellow]\n")
+
+        uvicorn.run(app, host=host, port=port, log_level="info")
+    except ImportError:
+        console.print("[red]Error: FastAPI and uvicorn are required for Web UI[/red]")
+        console.print("[yellow]Install with: pip install fastapi uvicorn[standard][/yellow]")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()
